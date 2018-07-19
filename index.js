@@ -63,7 +63,7 @@ SymDbModel.prototype.save = function (obj, cb) {
             return cb(err, result);
         }
 
-        self.index(file, obj, function (err) {
+        self.index(obj, function (err) {
             return cb(err, obj);
         });
     });
@@ -72,13 +72,15 @@ SymDbModel.prototype.save = function (obj, cb) {
 SymDbModel.prototype.id = function () {
     var self = this;
 
-    return Math.random() * 100000000000000000;
+    return (Math.random() * 100000000000000000).toString(36);
 };
 
-SymDbModel.prototype.index = function (target, obj, cb) {
+SymDbModel.prototype.index = function (obj, cb) {
     var self = this;
 
     var keys = Object.keys(self.schema);
+
+    var target =  path.join('../', '../', '../', 'store', obj._id + '.json'); 
 
     doWhile(function (next) {
         var key = keys.shift();
@@ -92,7 +94,7 @@ SymDbModel.prototype.index = function (target, obj, cb) {
         }
 
         var val = String(obj[key]);
-        var link = path.join(self.root, 'index', key, val, obj._id + '.json');
+        var link = path.join(self.root, 'index', key, val, obj._id);
 
         self.db.symlinkFile(target, link, function (err) {
             if (err) {
