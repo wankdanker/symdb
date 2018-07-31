@@ -1,7 +1,9 @@
 var path = require('path');
 var fs = require('fs');
-var mkdirp = require('./mkdirp');
+var mkdirp = require('mkdirp');
 var doWhile = require('dank-do-while');
+var uuid = require('uuid/v4');
+var intersect = require('intersect');
 
 module.exports = SymDb;
 
@@ -17,7 +19,13 @@ SymDb.prototype.Model = function (name, schema) {
     return new SymDbModel(self, name, schema);
 };
 
-SymDb.prototype.writeFile = function (file, data, cb) {
+SymDb.prototype.id = function () { 
+    var self = this;
+
+    return uuid();
+}
+
+SymDb.prototype.writeJSON = function (file, data, cb) {
     var self = this;
 
     mkdirp(path.dirname(file), function (err) {
@@ -26,6 +34,46 @@ SymDb.prototype.writeFile = function (file, data, cb) {
         }
 
         fs.writeFile(file, JSON.stringify(data), cb);
+    });
+};
+
+SymDb.prototype.readJSON = function (file, cb) {
+    var self = this;
+
+    fs.readFile(file, function (err, data) {
+        if (err) {
+            return cb(err);
+        }
+
+        try {
+            data = JSON.parse(data);
+        }
+        catch (e) {
+            return cb(e);
+        }
+
+        return cb(null, data);
+    });
+};
+
+SymDb.prototype.readdir = function (dir, filter, cb) {
+    var self = this;
+
+    if (!cb) {
+        cb = filter;
+        filter = null;
+    }
+
+    fs.readdir(dir, function (err, files) {
+        if (err) {
+            return cb(err);
+        }
+
+        if (filter) {
+            files = files.filter(filter);
+        }
+
+        return cb(null, files);
     });
 };
 
@@ -58,7 +106,7 @@ SymDbModel.prototype.save = function (obj, cb) {
 
     var file = path.join(self.root, 'store', obj._id + '.json');
 
-    self.db.writeFile(file, obj, function (err, result) {
+    self.db.writeJSON(file, obj, function (err, result) {
         if (err) {
             return cb(err, result);
         }
@@ -72,13 +120,15 @@ SymDbModel.prototype.save = function (obj, cb) {
 SymDbModel.prototype.id = function () {
     var self = this;
 
-    return (Math.random() * 100000000000000000).toString(36);
+    return self.db.id();
 };
 
 SymDbModel.prototype.index = function (obj, cb) {
     var self = this;
 
     var keys = Object.keys(self.schema);
+
+    keys.push('_id');
 
     var target =  path.join('../', '../', '../', 'store', obj._id + '.json'); 
 
@@ -112,3 +162,58 @@ SymDbModel.prototype.add = function (obj, cb) {
     return self.save(obj, cb);
 }
 
+SymDbModel.prototype.get = function (lookup, cb) {
+    var self = this;
+
+    //if lookup contains indexed fields then we should use those
+    //to find data in the index
+    var indexes = Object.keys(lookup).filter(function (key) {
+        return self.schema[key];
+    });
+
+    var found = [];
+
+    //for each index, get a list of the files in the index dir
+    indexes.forEach(function (index) {
+        var val = String(lookup[index]);
+        var p = path.join(self.root, 'index', index, val);
+        
+        self.db.readdir(p, function (err, ids) {
+            found.push(ids);
+
+            check();
+        });
+    })
+
+    function check () {
+        if (found.length === indexes.length) {
+            var matches = intersect(found);
+
+            if (!matches.length) {
+                return cb(null, []);
+            }
+
+            return load(matches);
+        }
+    }
+
+    function load (matches) {
+        var count = 0;
+        var results = [];
+
+        matches.forEach(function (match) {
+            var p = path.join(self.root, 'store', match + '.json');
+
+            self.db.readJSON(p, function (err, obj) {
+                //TODO: handle err?
+                count += 1;
+
+                results.push(obj);
+
+                if (count === matches.length) {
+                    return cb(null, results)
+                }
+            });
+        });
+    }
+};
