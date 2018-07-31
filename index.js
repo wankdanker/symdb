@@ -4,6 +4,9 @@ var mkdirp = require('mkdirp');
 var doWhile = require('dank-do-while');
 var uuid = require('uuid/v4');
 var intersect = require('intersect');
+var rmdir = require('./lib/rm-empty-dir');
+var noop = function () {};
+
 
 module.exports = SymDb;
 
@@ -77,6 +80,20 @@ SymDb.prototype.readdir = function (dir, filter, cb) {
     });
 };
 
+SymDb.prototype.delFile = function (p, cb) {
+    var self = this;
+
+    fs.unlink(p, function (err) {
+        //callback first
+        cb(err);
+
+        //cleanup empty dirs later so it doesn't hinder the current call
+        var dirname = path.dirname(p);
+
+        rmdir(dirname);
+    });
+};
+
 SymDb.prototype.symlinkFile = function (target, p, cb) {
     var self = this;
 
@@ -99,12 +116,31 @@ function SymDbModel (db, name, schema) {
     self.root = path.join(self.db.root, self.name);
 }
 
+SymDbModel.prototype.getPath = function (type, obj, index, val) {
+    var self = this;
+
+    switch (type) {
+        case 'store' :
+            return path.join(self.root, 'store', obj._id + '.json');
+        case 'link-target' :
+            return path.join('../', '../', '../', 'store', obj._id + '.json');
+        case 'symlink' :
+            return path.join(self.root, 'index', index, val, obj._id);
+        case 'index-links' :
+            return path.join(self.root, 'index-links', obj._id + '.json');
+        case 'index-path' :
+            return path.join(self.root, 'index', index, val);
+    }
+}
+
 SymDbModel.prototype.save = function (obj, cb) {
     var self = this;
 
+    cb = cb || noop;
+
     obj._id = obj._id || self.id();
 
-    var file = path.join(self.root, 'store', obj._id + '.json');
+    var file = self.getPath('store', obj);
 
     self.db.writeJSON(file, obj, function (err, result) {
         if (err) {
@@ -125,12 +161,13 @@ SymDbModel.prototype.id = function () {
 
 SymDbModel.prototype.index = function (obj, cb) {
     var self = this;
+    var links = [];
 
     var keys = Object.keys(self.schema);
 
     keys.push('_id');
 
-    var target =  path.join('../', '../', '../', 'store', obj._id + '.json'); 
+    var target = self.getPath('link-target', obj);
 
     doWhile(function (next) {
         var key = keys.shift();
@@ -144,7 +181,10 @@ SymDbModel.prototype.index = function (obj, cb) {
         }
 
         var val = String(obj[key]);
-        var link = path.join(self.root, 'index', key, val, obj._id);
+
+        var link = self.getPath('symlink', obj, key, val);
+
+        links.push(link);
 
         self.db.symlinkFile(target, link, function (err) {
             if (err) {
@@ -153,17 +193,35 @@ SymDbModel.prototype.index = function (obj, cb) {
 
             return next(true);
         })
-    }, cb);
+    }, function () {
+        var p = self.getPath('index-links', obj);
+
+        self.db.writeJSON(p, links, cb);
+    });
 };
 
 SymDbModel.prototype.add = function (obj, cb) {
     var self = this;
 
+    cb = cb || noop;
+
     return self.save(obj, cb);
+}
+
+SymDbModel.prototype.update = function (obj, cb) {
+    var self = this;
+
+    cb = cb || noop;
+
+    return self.del(obj, function (err) {
+        self.save(obj, cb);
+    });
 }
 
 SymDbModel.prototype.get = function (lookup, cb) {
     var self = this;
+
+    cb = cb || noop;
 
     //if lookup contains indexed fields then we should use those
     //to find data in the index
@@ -176,7 +234,7 @@ SymDbModel.prototype.get = function (lookup, cb) {
     //for each index, get a list of the files in the index dir
     indexes.forEach(function (index) {
         var val = String(lookup[index]);
-        var p = path.join(self.root, 'index', index, val);
+        var p = self.getPath('index-path', null, index, val)
         
         self.db.readdir(p, function (err, ids) {
             found.push(ids);
@@ -202,13 +260,15 @@ SymDbModel.prototype.get = function (lookup, cb) {
         var results = [];
 
         matches.forEach(function (match) {
-            var p = path.join(self.root, 'store', match + '.json');
+            var p = self.getPath('store', { _id : match });
 
             self.db.readJSON(p, function (err, obj) {
                 //TODO: handle err?
                 count += 1;
 
-                results.push(obj);
+                if (obj) {
+                    results.push(obj);
+                }
 
                 if (count === matches.length) {
                     return cb(null, results)
@@ -216,4 +276,41 @@ SymDbModel.prototype.get = function (lookup, cb) {
             });
         });
     }
+};
+
+SymDbModel.prototype.del = function (obj, cb) {
+    var self = this;
+
+    cb = cb || noop;
+
+    var p = self.getPath('store', obj);
+
+    return self.db.delFile(p, function (err) {
+        if (err) {
+            return cb(err);
+        }
+
+        var p = self.getPath('index-links', obj);
+
+        self.db.readJSON(p, function (err, links) {
+            if (err) {
+                return cb(err);
+            }
+
+            var count = 0;
+
+            links = links || [];
+            links.push(p);
+
+            links.forEach(function (link) {
+                self.db.delFile(link, function () {
+                    count += 1;
+
+                    if (count === links.length) {
+                        return cb();
+                    }
+                });
+            });
+        });
+    });
 };

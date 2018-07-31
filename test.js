@@ -17,9 +17,19 @@ User.add({ name : 'Dan', age : 38, user_id : 1 }, function (err, obj) {
         process.exit(1);
     }
 
-    console.log(obj);
+    console.log('added', obj);
 
-    User.get({ user_id : 0 }, function (err, records) {
-        console.log(arguments)
-    })
+    User.get(obj, function (err, records) {
+        console.log('got', records)
+    
+        obj.age = 39;
+
+        User.update(obj, function (err, obj) {
+            console.log('updated', obj);
+
+            User.del(obj, function (err) {
+                console.log('deleted', obj);
+            });
+        });
+    });
 });
