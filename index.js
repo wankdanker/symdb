@@ -122,6 +122,8 @@ SymDbModel.prototype.getPath = function (type, obj, index, val) {
     switch (type) {
         case 'store' :
             return path.join(self.root, 'store', obj._id + '.json');
+        case 'store-path' :
+            return path.join(self.root, 'store');
         case 'link-target' :
             return path.join('../', '../', '../', 'store', obj._id + '.json');
         case 'symlink' :
@@ -231,7 +233,19 @@ SymDbModel.prototype.get = function (lookup, cb) {
 
     var found = [];
 
-    //for each index, get a list of the files in the index dir
+    //if no indexes found then return all objects
+    if (!indexes.length) {
+        var p = self.getPath('store-path');
+
+        return self.db.readdir(p, function (err, ids) {
+            found.push(ids);
+            ids = ids.map(function (f) { return path.basename(f, '.json')});
+
+            load(ids);
+        });
+    }
+
+    //else, for each index, get a list of the files in the index dir
     indexes.forEach(function (index) {
         var val = String(lookup[index]);
         var p = self.getPath('index-path', null, index, val)
@@ -241,7 +255,7 @@ SymDbModel.prototype.get = function (lookup, cb) {
 
             check();
         });
-    })
+    });
 
     function check () {
         if (found.length === indexes.length) {

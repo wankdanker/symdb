@@ -7,11 +7,14 @@
     "lib": "lib"
   },
   "dependencies": {
+    "dank-do-while": "^0.1.2",
     "intersect": "^1.0.1",
     "mkdirp": "^0.5.1",
     "uuid": "^3.3.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "tape": "^4.9.1"
+  },
   "scripts": {
     "test": "node test.js"
   },
