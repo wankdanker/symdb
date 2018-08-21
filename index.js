@@ -7,7 +7,6 @@ var intersect = require('intersect');
 var rmdir = require('./lib/rm-empty-dir');
 var noop = function () {};
 
-
 module.exports = SymDb;
 
 function SymDb (opts) {
@@ -31,6 +30,11 @@ SymDb.prototype.id = function () {
 SymDb.prototype.writeJSON = function (file, data, cb) {
     var self = this;
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.writeJSON, file, data);
+    }
+
     mkdirp(path.dirname(file), function (err) {
         if (err) {
             return cb(err);
@@ -42,6 +46,11 @@ SymDb.prototype.writeJSON = function (file, data, cb) {
 
 SymDb.prototype.readJSON = function (file, cb) {
     var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.readJSON, file);
+    }
 
     fs.readFile(file, function (err, data) {
         if (err) {
@@ -67,6 +76,11 @@ SymDb.prototype.readdir = function (dir, filter, cb) {
         filter = null;
     }
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.readdir, dir, filter);
+    }
+
     fs.readdir(dir, function (err, files) {
         if (err) {
             return cb(err);
@@ -83,6 +97,11 @@ SymDb.prototype.readdir = function (dir, filter, cb) {
 SymDb.prototype.delFile = function (p, cb) {
     var self = this;
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.delFile, p);
+    }
+
     fs.unlink(p, function (err) {
         //callback first
         cb(err);
@@ -96,6 +115,11 @@ SymDb.prototype.delFile = function (p, cb) {
 
 SymDb.prototype.symlinkFile = function (target, p, cb) {
     var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.symlinkFile, target, p);
+    }
 
     mkdirp(path.dirname(p), function (err) {
         if (err) {
@@ -138,6 +162,11 @@ SymDbModel.prototype.getPath = function (type, obj, index, val) {
 SymDbModel.prototype.save = function (obj, cb) {
     var self = this;
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.save, obj);
+    }
+
     cb = cb || noop;
 
     obj._id = obj._id || self.id();
@@ -163,6 +192,12 @@ SymDbModel.prototype.id = function () {
 
 SymDbModel.prototype.index = function (obj, cb) {
     var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.index, obj);
+    }
+
     var links = [];
 
     var keys = Object.keys(self.schema);
@@ -205,6 +240,11 @@ SymDbModel.prototype.index = function (obj, cb) {
 SymDbModel.prototype.add = function (obj, cb) {
     var self = this;
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.add, obj);
+    }
+
     cb = cb || noop;
 
     return self.save(obj, cb);
@@ -212,6 +252,11 @@ SymDbModel.prototype.add = function (obj, cb) {
 
 SymDbModel.prototype.update = function (obj, cb) {
     var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.update, obj);
+    }
 
     cb = cb || noop;
 
@@ -222,6 +267,11 @@ SymDbModel.prototype.update = function (obj, cb) {
 
 SymDbModel.prototype.get = function (lookup, cb) {
     var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.get, lookup);
+    }
 
     cb = cb || noop;
 
@@ -295,6 +345,11 @@ SymDbModel.prototype.get = function (lookup, cb) {
 SymDbModel.prototype.del = function (obj, cb) {
     var self = this;
 
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.del, obj);
+    }
+
     cb = cb || noop;
 
     var p = self.getPath('store', obj);
@@ -328,3 +383,26 @@ SymDbModel.prototype.del = function (obj, cb) {
         });
     });
 };
+
+function Promised () {
+    var args = Array.prototype.slice.call(arguments);
+    var context = args.shift();
+    var method = args.shift();
+
+    var p = new Promise(function (resolve, reject) {
+        args.push(function cb() {
+            var args2 = Array.prototype.slice.call(arguments);
+            var err = args2.shift();
+
+            if (err) {
+                return reject(err);
+            }
+
+            return resolve.apply(p, args2);
+        });
+
+        method.apply(context, args);
+    });
+
+    return p;
+}
