@@ -2,9 +2,11 @@ var path = require('path');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var doWhile = require('dank-do-while');
+var EventPipeline = require('event-pipeline');
 var uuid = require('uuid/v4');
 var intersect = require('intersect');
 var rmdir = require('./lib/rm-empty-dir');
+var inherits = require('util').inherits;
 var noop = function () {};
 
 module.exports = SymDb;
@@ -12,8 +14,12 @@ module.exports = SymDb;
 function SymDb (opts) {
     var self = this;
 
+    EventPipeline.call(self);
+
     self.root = opts.root;
 }
+
+inherits(SymDb, EventPipeline);
 
 SymDb.prototype.Model = function (name, schema) {
     var self = this;
@@ -36,7 +42,7 @@ SymDb.prototype.writeJSON = function (file, data, cb) {
     }
 
     mkdirp(path.dirname(file), function (err) {
-        if (err) {
+        if (err) {// && err.code !== 'EEXIST') {
             return cb(err);
         }
 
@@ -102,14 +108,16 @@ SymDb.prototype.delFile = function (p, cb) {
         return Promised(self, self.delFile, p);
     }
 
-    fs.unlink(p, function (err) {
-        //callback first
-        cb(err);
+    return fs.unlink(p, function (err) {
+        if (err) {
+            return cb(err);
+        }
 
-        //cleanup empty dirs later so it doesn't hinder the current call
         var dirname = path.dirname(p);
 
-        rmdir(dirname);
+        return rmdir(dirname, function (err) {
+            return cb();
+        });
     });
 };
 
@@ -133,12 +141,16 @@ SymDb.prototype.symlinkFile = function (target, p, cb) {
 function SymDbModel (db, name, schema) {
     var self = this;
 
+    EventPipeline.call(self);
+
     self.db = db;
     self.name = name;
     self.schema = schema;
 
     self.root = path.join(self.db.root, self.name);
 }
+
+inherits(SymDbModel, EventPipeline);
 
 SymDbModel.prototype.getPath = function (type, obj, index, val) {
     var self = this;
@@ -171,15 +183,27 @@ SymDbModel.prototype.save = function (obj, cb) {
 
     obj._id = obj._id || self.id();
 
-    var file = self.getPath('store', obj);
-
-    self.db.writeJSON(file, obj, function (err, result) {
+    return self.emit('save:before', obj, function (err) {
         if (err) {
-            return cb(err, result);
+            return cb(err);
         }
 
-        self.index(obj, function (err) {
+    var file = self.getPath('store', obj);
+
+        return self.db.writeJSON(file, obj, function (err) {
+            if (err) {
+                return cb(err);
+            }
+
+            return self.index(obj, function (err) {
+        if (err) {
+                    return cb(err);
+        }
+
+                return self.emit('save:after', obj, function (err) {
             return cb(err, obj);
+        });
+    });
         });
     });
 };
@@ -247,7 +271,25 @@ SymDbModel.prototype.add = function (obj, cb) {
 
     cb = cb || noop;
 
-    return self.save(obj, cb);
+    return self.emit('add:before', obj, function (err) {
+        if (err) {
+            return cb(err);
+        }
+
+        return self.save(obj, function (err) {
+            if (err) {
+                return cb(err);
+            }
+
+            return self.emit('add:after', obj, function (err) {
+                if (err) {
+                    return cb(err);
+                }
+
+                return cb(null, obj);
+            });
+        });
+    });
 }
 
 SymDbModel.prototype.update = function (obj, cb) {
@@ -260,8 +302,30 @@ SymDbModel.prototype.update = function (obj, cb) {
 
     cb = cb || noop;
 
+    return self.emit('update:before', obj, function (err) {
+        if (err) {
+            return cb(err);
+        }
+
     return self.del(obj, function (err) {
-        self.save(obj, cb);
+            if (err) {
+                return cb(err);
+            }
+
+            return self.save(obj, function (err, result) {
+                if (err) {
+                    return cb(err);
+                }
+
+                return self.emit('update:after', result, function (err) {
+                    if (err) {
+                        return cb(err);
+                    }
+
+                    return cb(null, result);
+                });
+            });
+        });
     });
 }
 
@@ -352,16 +416,15 @@ SymDbModel.prototype.del = function (obj, cb) {
 
     cb = cb || noop;
 
-    var p = self.getPath('store', obj);
-
-    return self.db.delFile(p, function (err) {
+    return self.emit('delete:before', obj, function (err) {
         if (err) {
             return cb(err);
         }
 
-        var p = self.getPath('index-links', obj);
+        var p1 = self.getPath('store', obj);
+        var p2 = self.getPath('index-links', obj);
 
-        self.db.readJSON(p, function (err, links) {
+        self.db.readJSON(p2, function (err, links) {
             if (err) {
                 return cb(err);
             }
@@ -369,14 +432,17 @@ SymDbModel.prototype.del = function (obj, cb) {
             var count = 0;
 
             links = links || [];
-            links.push(p);
+            links.push(p2);
+            links.push(p1);
 
             links.forEach(function (link) {
                 self.db.delFile(link, function () {
                     count += 1;
 
                     if (count === links.length) {
-                        return cb();
+                        return self.emit('delete:after', obj, function (err) {
+                            return cb(err);
+                        });
                     }
                 });
             });

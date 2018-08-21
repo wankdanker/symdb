@@ -136,3 +136,159 @@ test('base functionality via async calls', async function (t) {
 
     t.end();
 });
+
+test('test save:before and save:after', function (t) {
+    t.plan(3);
+
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    }).on('save:before', function (obj, next) {
+        t.ok(obj, 'user object returned in save:before callback');
+
+        return next();
+    }).on('save:after', function (obj, next) {
+        t.ok(obj, 'user object returned in save:after callback');
+
+        return next();
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    User.add(add).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        User.del(obj).then(function () {
+            t.end();
+        });
+    }).catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
+
+test('test add:before and add:after', function (t) {
+    t.plan(3);
+
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    }).on('add:before', function (obj, next) {
+        t.ok(obj, 'user object returned in add:before callback');
+        return next();
+    }).on('add:after', function (obj, next) {
+        t.ok(obj, 'user object returned in add:after callback');
+        return next();
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    User.add(add).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        User.del(obj).then(function () {
+            t.end();
+        });
+    }).catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
+
+test('test delete:before and delete:after', function (t) {
+    t.plan(3);
+
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    }).on('delete:before', function (obj, next) {
+        t.ok(obj, 'user object returned in delete:before callback');
+
+        return next();
+    }).on('delete:after', function (obj, next) {
+        t.ok(obj, 'user object returned in delete:after callback');
+
+        return next();
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    User.add(add).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        User.del(obj).then(function () {
+            t.end();
+        })
+    }).catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
+
+test('test update:before and update:after', function (t) {
+    t.plan(3);
+
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    }).on('update:before', function (obj, next) {
+        t.ok(obj, 'user object returned in update:before callback');
+
+        return next();
+    }).on('update:after', function (obj, next) {
+        t.ok(obj, 'user object returned in update:after callback');
+
+        return next();
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    User.add(add).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        User.update(obj).then(function(obj) {
+            User.del(obj).then(function () {
+                t.end();
+            });
+        });
+    }).catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
