@@ -292,3 +292,45 @@ test('test update:before and update:after', function (t) {
         t.notOk(err, 'no errors returned in add() callback');
     });
 });
+
+test('test get:before and get:after', function (t) {
+    t.plan(4);
+
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    }).on('get:before', function (obj, next) {
+        t.ok(obj, 'user object returned in get:before callback');
+
+        return next();
+    }).on('get:after', function (results, next) {
+        t.ok(results, 'user object returned in get:after callback');
+        t.equal(results.length, 1, 'results has one record');
+
+        return next();
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    User.add(add).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        User.get(obj).then(function(results) {
+            User.del(results[0]).then(function () {
+                t.end();
+            });
+        });
+    }).catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});

@@ -339,71 +339,91 @@ SymDbModel.prototype.get = function (lookup, cb) {
 
     cb = cb || noop;
 
-    //if lookup contains indexed fields then we should use those
-    //to find data in the index
-    var indexes = Object.keys(lookup).filter(function (key) {
-        return self.schema[key];
-    });
-
-    var found = [];
-
-    //if no indexes found then return all objects
-    if (!indexes.length) {
-        var p = self.getPath('store-path');
-
-        return self.db.readdir(p, function (err, ids) {
-            found.push(ids);
-            ids = ids.map(function (f) { return path.basename(f, '.json')});
-
-            load(ids);
-        });
-    }
-
-    //else, for each index, get a list of the files in the index dir
-    indexes.forEach(function (index) {
-        var val = String(lookup[index]);
-        var p = self.getPath('index-path', null, index, val)
-        
-        self.db.readdir(p, function (err, ids) {
-            found.push(ids);
-
-            check();
-        });
-    });
-
-    function check () {
-        if (found.length === indexes.length) {
-            var matches = intersect(found);
-
-            if (!matches.length) {
-                return cb(null, []);
-            }
-
-            return load(matches);
+    self.emit('get:before', lookup, function (err) {
+        if (err) {
+            return cb(err);
         }
-    }
 
-    function load (matches) {
-        var count = 0;
-        var results = [];
+        //if lookup contains indexed fields then we should use those
+        //to find data in the index
+        var indexes = Object.keys(lookup).filter(function (key) {
+            return self.schema[key];
+        });
 
-        matches.forEach(function (match) {
-            var p = self.getPath('store', { _id : match });
+        var found = [];
 
-            self.db.readJSON(p, function (err, obj) {
-                //TODO: handle err?
-                count += 1;
+        //if no indexes found then return all objects
+        if (!indexes.length) {
+            var p = self.getPath('store-path');
 
-                if (obj) {
-                    results.push(obj);
-                }
+            return self.db.readdir(p, function (err, ids) {
+                ids = ids || [];
 
-                if (count === matches.length) {
-                    return cb(null, results)
-                }
+                found.push(ids);
+                ids = ids.map(function (f) { return path.basename(f, '.json')});
+
+                load(ids);
+            });
+        }
+
+        //else, for each index, get a list of the files in the index dir
+        indexes.forEach(function (index) {
+            var val = String(lookup[index]);
+            var p = self.getPath('index-path', null, index, val)
+            
+            self.db.readdir(p, function (err, ids) {
+                found.push(ids);
+
+                check();
             });
         });
-    }
+
+        
+
+        function check () {
+            if (found.length === indexes.length) {
+                var matches = intersect(found);
+
+                if (!matches.length) {
+                    return done(null, []);
+                }
+
+                return load(matches);
+            }
+        }
+
+        function load (matches) {
+            var count = 0;
+            var results = [];
+
+            matches.forEach(function (match) {
+                var p = self.getPath('store', { _id : match });
+
+                self.db.readJSON(p, function (err, obj) {
+                    //TODO: handle err?
+                    count += 1;
+
+                    if (obj) {
+                        results.push(obj);
+                    }
+
+                    if (count === matches.length) {
+                        return done(null, results)
+                    }
+                });
+            });
+        }
+
+        function done(err, results) {
+            self.emit('get:after', results, function (err) {
+                if (err) {
+                    return cb(err);
+                }
+
+                return cb(null, results);
+            });
+        }
+    });
 };
 
 SymDbModel.prototype.del = function (obj, cb) {
