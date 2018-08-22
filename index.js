@@ -188,7 +188,7 @@ SymDbModel.prototype.save = function (obj, cb) {
             return cb(err);
         }
 
-    var file = self.getPath('store', obj);
+        var file = self.getPath('store', obj);
 
         return self.db.writeJSON(file, obj, function (err) {
             if (err) {
@@ -196,14 +196,14 @@ SymDbModel.prototype.save = function (obj, cb) {
             }
 
             return self.index(obj, function (err) {
-        if (err) {
-                    return cb(err);
-        }
+                if (err) {
+                   return cb(err);
+                }
 
                 return self.emit('save:after', obj, function (err) {
-            return cb(err, obj);
-        });
-    });
+                    return cb(err, obj);
+                });
+            });
         });
     });
 };
@@ -487,7 +487,7 @@ function Promised () {
             return resolve.apply(p, args2);
         });
 
-        method.apply(context, args);
+        return method.apply(context, args);
     });
 
     return p;
