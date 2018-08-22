@@ -64,37 +64,35 @@ test('base functionality via Promises', function (t) {
         , description : 'quartz'
     };
 
+    var o;
+
     User.add(add).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
         t.ok(obj._id, 'user object now contains an _id attribute in add() callback');
-
-        User.get(obj).then(function (records) {
-            t.ok(records, 'records returned in get() callback');
-            t.equal(records.length, 1, 'one record returned in get() callback')
-            t.deepEqual(records[0], obj, 'the object returned in the get() callback matches the object we looked up')
         
-            obj.age = 39;
+        o = obj;
 
-            User.update(obj).then(function (obj) {
-                t.ok(obj, 'user object returned in update() callback');
-                t.equal(obj.age, 39, 'user object returned in update() callback is correct updated age');
+        return User.get(obj)
+    }).then(function (records) {
+        t.ok(records, 'records returned in get() callback');
+        t.equal(records.length, 1, 'one record returned in get() callback')
+        t.deepEqual(records[0], o, 'the object returned in the get() callback matches the object we looked up')
+    
+        o.age = 39;
 
-                User.del(obj).then(function () {
-                    t.end();
-                }).catch(function (err) {
-                    t.notOk(err, 'no error returned in del() callback');
-                });
-            }).catch(function (err) {
-                t.notOk(err, 'no error returned in update() callback');
-            });
-        }).catch(function (err) {
-            t.notOk(err, 'no error returned in get() callback');
-        });
+        return User.update(o);
+    }).then(function (obj) {
+        t.ok(obj, 'user object returned in update() callback');
+        t.equal(obj.age, 39, 'user object returned in update() callback is correct updated age');
+
+        return User.del(obj);
+    }).then(function () {
+        t.end();
     }).catch(function (err) {
-        t.notOk(err, 'no errors returned in add() callback');
+        t.notOk(err, 'no errors caught');
+        t.end();
     });
 });
-
 
 test('base functionality via async calls', async function (t) {
     var db = new SymDb({
