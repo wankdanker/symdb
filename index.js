@@ -461,7 +461,7 @@ SymDbModel.prototype.del = function (obj, cb) {
 
                     if (count === links.length) {
                         return self.emit('delete:after', obj, function (err) {
-                            return cb(err);
+                            return cb(err, obj);
                         });
                     }
                 });
