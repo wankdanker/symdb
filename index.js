@@ -378,8 +378,6 @@ SymDbModel.prototype.get = function (lookup, cb) {
             });
         });
 
-        
-
         function check () {
             if (found.length === indexes.length) {
                 var matches = intersect(found);
@@ -395,6 +393,10 @@ SymDbModel.prototype.get = function (lookup, cb) {
         function load (matches) {
             var count = 0;
             var results = [];
+
+            if (!matches.length) {
+                return done(null, results);
+            }
 
             matches.forEach(function (match) {
                 var p = self.getPath('store', { _id : match });
