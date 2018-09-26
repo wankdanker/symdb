@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "dank-do-while": "^0.1.2",
+    "dank-each": "^1.0.0",
     "event-pipeline": "^1.1.0",
     "intersect": "^1.0.1",
     "mkdirp": "^0.5.1",

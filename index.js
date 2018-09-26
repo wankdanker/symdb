@@ -4,12 +4,15 @@ var mkdirp = require('mkdirp');
 var doWhile = require('dank-do-while');
 var EventPipeline = require('event-pipeline');
 var uuid = require('uuid/v4');
-var intersect = require('intersect');
-var rmdir = require('./lib/rm-empty-dir');
+var SymDbComparision = require('./lib/compare');
 var inherits = require('util').inherits;
 var noop = function () {};
+var IndexSearch = require('./lib/index-search');
+var ScanSearch = require('./lib/scan-search');
 
 module.exports = SymDb;
+
+SymDbComparision.mixin(module.exports);
 
 function SymDb (opts) {
     var self = this;
@@ -17,6 +20,9 @@ function SymDb (opts) {
     EventPipeline.call(self);
 
     self.root = opts.root;
+    self.models = {};
+
+    SymDbComparision.mixin(self);
 }
 
 inherits(SymDb, EventPipeline);
@@ -24,7 +30,11 @@ inherits(SymDb, EventPipeline);
 SymDb.prototype.Model = function (name, schema) {
     var self = this;
 
-    return new SymDbModel(self, name, schema);
+    var model = new SymDbModel(self, name, schema);
+
+    self.models[name] = model;
+
+    return model;
 };
 
 SymDb.prototype.id = function () { 
@@ -115,9 +125,13 @@ SymDb.prototype.delFile = function (p, cb) {
 
         var dirname = path.dirname(p);
 
-        return rmdir(dirname, function (err) {
-            return cb();
-        });
+        return cb();
+
+        // TODO: re-enable this when we have some sort of directory
+        // locking mechanism to avoid race conditions with mkdirp and rmdir
+        // return rmdir(dirname, function (err) {
+        //     return cb();
+        // });
     });
 };
 
@@ -166,8 +180,10 @@ SymDbModel.prototype.getPath = function (type, obj, index, val) {
             return path.join(self.root, 'index', index, val, obj._id);
         case 'index-links' :
             return path.join(self.root, 'index-links', obj._id + '.json');
-        case 'index-path' :
+        case 'index-val-path' :
             return path.join(self.root, 'index', index, val);
+        case 'index-path' :
+            return path.join(self.root, 'index', index);
     }
 }
 
@@ -346,86 +362,30 @@ SymDbModel.prototype.get = function (lookup, cb) {
 
         //if lookup contains indexed fields then we should use those
         //to find data in the index
-        var indexes = Object.keys(lookup).filter(function (key) {
+        var lookups = Object.keys(lookup);
+        var indexes = lookups.filter(function (key) {
             return self.schema[key];
         });
 
-        var found = [];
-
-        //if no indexes found then return all objects
-        if (!indexes.length) {
-            var p = self.getPath('store-path');
-
-            return self.db.readdir(p, function (err, ids) {
-                ids = ids || [];
-
-                found.push(ids);
-                ids = ids.map(function (f) { return path.basename(f, '.json')});
-
-                load(ids);
-            });
+        //if all of the lookups are on indexed fields then we can do an
+        //index search
+        if (indexes.length === lookups.length) {
+            IndexSearch(self, lookup, done);
         }
-
-        //else, for each index, get a list of the files in the index dir
-        indexes.forEach(function (index) {
-            var val = String(lookup[index]);
-            var p = self.getPath('index-path', null, index, val)
-            
-            self.db.readdir(p, function (err, ids) {
-                found.push(ids);
-
-                check();
-            });
-        });
-
-        function check () {
-            if (found.length === indexes.length) {
-                var matches = intersect(found);
-
-                if (!matches.length) {
-                    return done(null, []);
-                }
-
-                return load(matches);
-            }
-        }
-
-        function load (matches) {
-            var count = 0;
-            var results = [];
-
-            if (!matches.length) {
-                return done(null, results);
-            }
-
-            matches.forEach(function (match) {
-                var p = self.getPath('store', { _id : match });
-
-                self.db.readJSON(p, function (err, obj) {
-                    //TODO: handle err?
-                    count += 1;
-
-                    if (obj) {
-                        results.push(obj);
-                    }
-
-                    if (count === matches.length) {
-                        return done(null, results)
-                    }
-                });
-            });
-        }
-
-        function done(err, results) {
-            self.emit('get:after', results, function (err) {
-                if (err) {
-                    return cb(err);
-                }
-
-                return cb(null, results);
-            });
+        else {
+            ScanSearch(self, lookup, done);
         }
     });
+
+    function done(err, results) {
+        self.emit('get:after', results, function (err) {
+            if (err) {
+                return cb(err);
+            }
+
+            return cb(null, results);
+        });
+    }
 };
 
 SymDbModel.prototype.del = function (obj, cb) {
@@ -494,3 +454,4 @@ function Promised () {
 
     return p;
 }
+

@@ -1,6 +1,43 @@
 var test = require('tape');
 var SymDb = require('./');
 
+test('comparison functions', function (t) {
+    t.equal(SymDb.gt(10).compare(11), true, '11 is greater than 10');
+    t.equal(SymDb.gt(10).compare(9), false, '9 is not greater than 10');
+
+    t.equal(SymDb.gte(10).compare(10), true, '10 is greater than or equal to 10');
+    t.equal(SymDb.gte(10).compare(20), true, '20 is greater than or equal to 10');
+    t.equal(SymDb.gte(10).compare(9), false, '9 is not greater than or equal to 10');
+
+    t.equal(SymDb.lt(11).compare(10), true, '10 is less than 11');
+    t.equal(SymDb.lt(9).compare(10), false, '10 is not less than 9');
+
+    t.equal(SymDb.lte(10).compare(10), true, '10 is less than or equal to 10');
+    t.equal(SymDb.lte(20).compare(10), true, '10 is less than or equal to 20');
+    t.equal(SymDb.lte(9).compare(10), false, '10 is not less than or equal to 9');
+
+    t.equal(SymDb.startsWith('dingo').compare('dingo this that'), true, '"dingo this that" starts with "dingo"');
+    t.equal(SymDb.startsWith('bart').compare('dingo this that'), false, '"dingo this that" does not contain "bart"');
+
+    t.equal(SymDb.contains('this').compare('dingo this that'), true, '"dingo this that" contains "this"');
+    t.equal(SymDb.contains('bart').compare('dingo this that'), false, '"dingo this that" does not contain "bart"');
+
+    t.equal(SymDb.between(1, 10).compare(5), true, '5 is between 1 and 10');
+    t.equal(SymDb.between(1, 10).compare(11), false, '11 is not between 1 and 10');
+
+    t.equal(SymDb.contains(['a','b', 'c']).compare('a'), true, 'array ["a", "b", "c"] does contain "a"');
+    t.equal(SymDb.contains(['a','b', 'c']).compare('d'), false, 'array ["a", "b", "c"] does not contain "d"');
+
+    t.equal(SymDb.compare(WeirdCompare).compare('buddha'), true, 'WeirdCompare function is true for "buddha"');
+    t.equal(SymDb.compare(WeirdCompare).compare('dog'), false, 'WeirdCompare function is not true for "dog"');
+    
+    t.end();
+
+    function WeirdCompare(z) {
+        return z === 'buddha'
+    }
+});
+
 test('base functionality via callbacks', function (t) {
     var db = new SymDb({
         root : "/tmp/db"
@@ -331,4 +368,117 @@ test('test get:before and get:after', function (t) {
     }).catch(function (err) {
         t.notOk(err, 'no errors returned in add() callback');
     });
+});
+
+test('test comparisons in indexed fields', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    var obj = await User.add(add);
+
+    t.ok(obj, 'user object returned in add() callback');
+    t.ok(obj._id, 'user object now contains an _id attribute in add() callback');
+
+    let records = await User.get({
+        user_id : db.gt(20)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+    t.deepEqual(records[0], obj, 'the object returned in the get() callback matches the object we looked up')
+
+    records = await User.get({
+        age : db.gt(25)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 0, 'no records returned in get() callback')
+
+    records = await User.get({
+        age : db.gt(20)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+
+    records = await User.get({
+        age : db.gte(21)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'no records returned in get() callback')
+
+    await User.del(obj);
+
+    t.end();
+});
+
+
+test('test comparisons in non-indexed fields', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+    });
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    var obj = await User.add(add);
+
+    t.ok(obj, 'user object returned in add() callback');
+    t.ok(obj._id, 'user object now contains an _id attribute in add() callback');
+
+    let records = await User.get({
+        user_id : db.gt(20)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+    t.deepEqual(records[0], obj, 'the object returned in the get() callback matches the object we looked up')
+
+    records = await User.get({
+        age : db.gt(25)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 0, 'no records returned in get() callback')
+
+    records = await User.get({
+        age : db.gt(20)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+
+    records = await User.get({
+        age : db.gte(21)
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'no records returned in get() callback')
+
+    await User.del(obj);
+
+    t.end();
 });
