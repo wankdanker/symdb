@@ -58,6 +58,7 @@ todo
 - [ ] deep attribute indexing
 - [ ] fulltext search
 - [ ] fix cleanup of empty index directories
+- [ ] rewrite .update() handling to not call delete() then save()
 
 license
 -------
