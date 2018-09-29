@@ -482,3 +482,63 @@ test('test comparisons in non-indexed fields', async function (t) {
 
     t.end();
 });
+
+test('test paging', function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    })
+
+    var add = { 
+        name : 'Dan'
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    var users = [];
+
+    User.add(Object.assign({}, add)).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        users.push(obj);
+
+        return User.add(Object.assign({}, add));
+    }).then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        users.push(obj);
+
+        return User.add(Object.assign({}, add));
+    })
+    .then(function (obj) {
+        t.ok(obj, 'user object returned in add() callback');
+
+        users.push(obj);
+
+        return User.page(2, 1).get({});
+    })
+    .then(function (us) {
+        t.ok(us, 'users array returned from get() callback');
+        t.equal(us.length, 1, 'one user object returned in get callback');
+        t.ok(us._page, '_page object set')
+        
+        var promises = [];
+        users.forEach(function (user) {
+            promises.push(User.del(user));
+        });
+
+        return Promise.all(promises);
+    })
+    .then(function () {
+        t.end();
+    })
+    .catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
