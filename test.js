@@ -528,9 +528,84 @@ test('test paging', function (t) {
         t.equal(us.length, 1, 'one user object returned in get callback');
         t.ok(us._page, '_page object set')
         
-        var promises = [];
-        users.forEach(function (user) {
-            promises.push(User.del(user));
+        var promises = users.map(function (user) {
+            return User.del(user);
+        });
+
+        return Promise.all(promises);
+    })
+    .then(function () {
+        t.end();
+    })
+    .catch(function (err) {
+        t.notOk(err, 'no errors returned in add() callback');
+    });
+});
+
+test('test paging', function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    })
+
+    var adds = [{ 
+            name : 'Dan'
+            , age : 21
+            , user_id : 95890
+            , group : 'a'
+            , description : 'quartz'
+        }
+        , {
+            name : 'Samantha'
+            , age : 9
+            , user_id : 47902
+            , group : 'b'
+            , description : 'granite'
+        }
+        , {
+            name : 'George'
+            , age : 17
+            , user_id : 28954
+            , group : 'a'
+            , description : 'sedimentary'
+        }
+        , {
+            name : 'Lynn'
+            , age : 43
+            , user_id : 30925
+            , group : 'b'
+            , description : 'arugula'
+        }
+    ];
+
+    var users = [];
+
+    var promises = adds.map(function (user) {
+        return User.add(user)
+    });
+
+    Promise.all(promises).then(function (u) {
+        users = u;
+
+        t.equal(u.length, adds.length, 'correct number of users created')
+
+        return User.sort({ age : 'asc' }).get()
+    })
+    .then(function (results) {
+        t.deepEqual(results, [users[1], users[2], users[0], users[3]]);
+
+        return User.sort({ group: 'desc', age : 'asc' }).get()
+    })
+    .then(function (results) {
+        t.deepEqual(results, [users[1], users[3], users[2], users[0]]);
+
+        var promises = users.map(function (user) {
+            return User.del(user);
         });
 
         return Promise.all(promises);
