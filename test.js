@@ -483,6 +483,55 @@ test('test comparisons in non-indexed fields', async function (t) {
     t.end();
 });
 
+test('test deep indexed and unindexed fields', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        "name.first" : String
+    });
+
+    var add = { 
+        name : { first : 'Dan', last : 'Smith' }
+        , age : 21
+        , user_id : 12345
+        , description : 'quartz'
+    };
+
+    var obj = await User.add(add);
+
+    t.ok(obj, 'user object returned in add() callback');
+    t.ok(obj._id, 'user object now contains an _id attribute in add() callback');
+
+    let records = await User.get({
+        "name.first" : "Dan"
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+    t.deepEqual(records[0], obj, 'the object returned in the get() callback matches the object we looked up')
+
+    records = await User.get({
+        "name.first" : "Steve"
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 0, 'no records returned in get() callback')
+
+    records = await User.get({
+        "name.last" : "Smith"
+    });
+
+    t.ok(records, 'records returned in get() callback');
+    t.equal(records.length, 1, 'one record returned in get() callback')
+    t.deepEqual(records[0], obj, 'the object returned in the get() callback matches the object we looked up')
+
+    await User.del(obj);
+
+    t.end();
+});
+
 test('test paging', function (t) {
     var db = new SymDb({
         root : "/tmp/db"
