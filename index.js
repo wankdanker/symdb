@@ -3,14 +3,14 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var EventPipeline = require('event-pipeline');
 var uuid = require('uuid/v4');
-var SymDbComparision = require('./lib/compare');
+var SymDbComparison = require('./lib/compare');
 var inherits = require('util').inherits;
 var SymDbModel = require('./lib/symdb-model');
 var Promised = require('./lib/promise')
 
 module.exports = SymDb;
 
-SymDbComparision.mixin(module.exports);
+SymDbComparison.mixin(module.exports);
 
 function SymDb (opts) {
     var self = this;
@@ -20,7 +20,7 @@ function SymDb (opts) {
     self.root = opts.root;
     self.models = {};
 
-    SymDbComparision.mixin(self);
+    SymDbComparison.mixin(self);
 }
 
 inherits(SymDb, EventPipeline);
