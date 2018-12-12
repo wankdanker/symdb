@@ -61,6 +61,7 @@ todo
 - [ ] rewrite .update() handling to not call delete() then save()
 - [x] paging
 - [x] sorting
+- [ ] https://github.com/davedoesdev/getdents
 
 license
 -------
