@@ -12,12 +12,17 @@ module.exports = SymDb;
 
 SymDbComparison.mixin(module.exports);
 
+SymDb.HARD_LINK = 1;
+SymDb.SOFT_LINK = 2;
+SymDb.SYM_LINK = 2;
+
 function SymDb (opts) {
     var self = this;
 
     EventPipeline.call(self);
 
     self.root = opts.root;
+    self.linkType = opts.linkType || SymDb.SYM_LINK;
     self.models = {};
 
     SymDbComparison.mixin(self);
@@ -133,12 +138,12 @@ SymDb.prototype.delFile = function (p, cb) {
     });
 };
 
-SymDb.prototype.symlinkFile = function (target, p, cb) {
+SymDb.prototype.linkFile = function (target, p, cb) {
     var self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
-        return Promised(self, self.symlinkFile, target, p);
+        return Promised(self, self.linkFile, target, p);
     }
 
     mkdirp(path.dirname(p), function (err) {
@@ -146,7 +151,12 @@ SymDb.prototype.symlinkFile = function (target, p, cb) {
             return cb(err);
         }
 
-        fs.symlink(target, p, cb);
+        if (self.linkType === SymDb.HARD_LINK) {
+            fs.link(path.resolve(p, '../' + target), p, cb)
+        }
+        else{
+            fs.symlink(target, p, cb);
+        }
     });
 }
 
