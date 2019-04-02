@@ -1,5 +1,6 @@
 var test = require('tape');
 var SymDb = require('./');
+var blobize = require('./lib/blobize');
 
 test('comparison functions', function (t) {
     t.equal(SymDb.gt(10).compare(11), true, '11 is greater than 10');
@@ -36,6 +37,26 @@ test('comparison functions', function (t) {
     function WeirdCompare(z) {
         return z === 'buddha'
     }
+});
+
+test('make sure getBlobs can find buffers in an object', function (t) {
+    var obj = {
+        a : {
+            b : {
+                c : Buffer.from("hello")
+            }
+        }
+        , d : Buffer.from("world")
+        , e : "not a buffer"
+    }
+
+    var buffers = blobize.getBlobs(obj);
+
+    t.ok(buffers['a.b.c'], 'a.b.c is a buffer');
+    t.ok(buffers['d'], 'd is a buffer');
+    t.notOk(buffers['e'], 'e is not a buffer');
+
+    t.end();
 });
 
 test('base functionality via callbacks', function (t) {
@@ -775,4 +796,45 @@ test('test reindex', function (t) {
     .catch(function (err) {
         t.notOk(err, 'no errors returned in add() callback');
     });
+});
+
+test('test writing a blob', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var User = db.Model('user', {
+        name : String
+        , age : Number
+        , user_id : Number
+    })
+
+    var adds = [{ 
+        name : 'Dan'
+        , age : 21
+        , user_id : 95890
+        , group : 'a'
+        , description : 'quartz'
+        , profile : { picture : Buffer.from("hello there! this is not a jpg") }
+    }];
+
+    var users = [];
+
+    for (let user of adds) {
+        users.push(await User.add(user));
+    }
+
+    t.equal(users.length, adds.length, 'correct number of users created');
+    t.ok(users[0].profile.picture instanceof Buffer, 'picture should still be an instance of a buffer');
+
+    let u = await User.get({ _id : users[0]._id })
+
+    t.equal(u.length, 1, 'should get fresh copy of user');
+    t.ok(u[0].profile.picture instanceof Buffer, 'fresh copy should have a Buffer as picture');
+
+    for (let user of users) {
+        await User.del(user);
+    }
+    
+    t.end();
 });

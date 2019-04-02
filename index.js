@@ -6,7 +6,8 @@ var uuid = require('uuid/v4');
 var SymDbComparison = require('./lib/compare');
 var inherits = require('util').inherits;
 var SymDbModel = require('./lib/symdb-model');
-var Promised = require('./lib/promise')
+var Promised = require('./lib/promise');
+var blobize = require('./lib/blobize');
 
 module.exports = SymDb;
 
@@ -26,6 +27,8 @@ function SymDb (opts) {
     self.models = {};
 
     SymDbComparison.mixin(self);
+
+    blobize(self);
 }
 
 inherits(SymDb, EventPipeline);
@@ -36,6 +39,8 @@ SymDb.prototype.Model = function (name, schema) {
     var model = new SymDbModel(self, name, schema);
 
     self.models[name] = model;
+
+    self.emit('model', model);
 
     return model;
 };
@@ -85,6 +90,40 @@ SymDb.prototype.readJSON = function (file, cb) {
 
         return cb(null, data);
     });
+};
+
+SymDb.prototype.writeBlob = function (file, data, cb) {
+    var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.writeBlob, file, data);
+    }
+
+    mkdirp(path.dirname(file), function (err) {
+        if (err && err.code !== 'EEXIST') {
+            return cb(err);
+        }
+
+        fs.writeFile(file, data, cb);
+    });
+};
+
+SymDb.prototype.readBlob = function (file, cb) {
+    var self = this;
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.readBlob, file);
+    }
+
+    fs.readFile(file, cb);
+};
+
+SymDb.prototype.readBlobStream = function (file) {
+    var self = this;
+
+    return fs.createReadStream(file);
 };
 
 SymDb.prototype.readdir = function (dir, filter, cb) {

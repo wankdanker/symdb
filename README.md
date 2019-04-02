@@ -62,6 +62,7 @@ todo
 - [x] paging
 - [x] sorting
 - [ ] https://github.com/davedoesdev/getdents
+- [ ] automatic blob storage (Buffers, ReadStreams, SymDbFile)
 
 license
 -------
