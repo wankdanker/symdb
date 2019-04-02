@@ -173,7 +173,7 @@ test('base functionality via async calls', async function (t) {
 });
 
 test('test save:before and save:after', function (t) {
-    t.plan(3);
+    t.plan(5);
 
     var db = new SymDb({
         root : "/tmp/db"
@@ -184,11 +184,13 @@ test('test save:before and save:after', function (t) {
         , age : Number
         , user_id : Number
     }).on('save:before', function (obj, next) {
-        t.ok(obj, 'user object returned in save:before callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in save:before callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in save:before callback');
 
         return next();
     }).on('save:after', function (obj, next) {
-        t.ok(obj, 'user object returned in save:after callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in save:after callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in save:after callback');
 
         return next();
     });
@@ -200,7 +202,11 @@ test('test save:before and save:after', function (t) {
         , description : 'quartz'
     };
 
-    User.add(add).then(function (obj) {
+    var context = {
+        session : { test : 12345 }
+    };
+
+    User.add(add, context).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
 
         User.del(obj).then(function () {
@@ -212,7 +218,7 @@ test('test save:before and save:after', function (t) {
 });
 
 test('test add:before and add:after', function (t) {
-    t.plan(3);
+    t.plan(5);
 
     var db = new SymDb({
         root : "/tmp/db"
@@ -223,10 +229,15 @@ test('test add:before and add:after', function (t) {
         , age : Number
         , user_id : Number
     }).on('add:before', function (obj, next) {
-        t.ok(obj, 'user object returned in add:before callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in add:before callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in add:before callback');
+
+
         return next();
     }).on('add:after', function (obj, next) {
-        t.ok(obj, 'user object returned in add:after callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in add:after callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in add:after callback');
+
         return next();
     });
 
@@ -237,7 +248,11 @@ test('test add:before and add:after', function (t) {
         , description : 'quartz'
     };
 
-    User.add(add).then(function (obj) {
+    var context = {
+        session : { test : 12345 }
+    };
+
+    User.add(add, context).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
 
         User.del(obj).then(function () {
@@ -249,7 +264,7 @@ test('test add:before and add:after', function (t) {
 });
 
 test('test delete:before and delete:after', function (t) {
-    t.plan(3);
+    t.plan(5);
 
     var db = new SymDb({
         root : "/tmp/db"
@@ -260,11 +275,13 @@ test('test delete:before and delete:after', function (t) {
         , age : Number
         , user_id : Number
     }).on('delete:before', function (obj, next) {
-        t.ok(obj, 'user object returned in delete:before callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in delete:before callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in delete:before callback');
 
         return next();
     }).on('delete:after', function (obj, next) {
-        t.ok(obj, 'user object returned in delete:after callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in delete:after callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in delete:after callback');
 
         return next();
     });
@@ -276,10 +293,14 @@ test('test delete:before and delete:after', function (t) {
         , description : 'quartz'
     };
 
-    User.add(add).then(function (obj) {
+    var context = {
+        session : { test : 12345 }
+    };
+
+    User.add(add, context).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
 
-        User.del(obj).then(function () {
+        User.del(obj, context).then(function () {
             t.end();
         })
     }).catch(function (err) {
@@ -288,7 +309,7 @@ test('test delete:before and delete:after', function (t) {
 });
 
 test('test update:before and update:after', function (t) {
-    t.plan(3);
+    t.plan(5);
 
     var db = new SymDb({
         root : "/tmp/db"
@@ -299,11 +320,13 @@ test('test update:before and update:after', function (t) {
         , age : Number
         , user_id : Number
     }).on('update:before', function (obj, next) {
-        t.ok(obj, 'user object returned in update:before callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in update:before callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in update:before callback');
 
         return next();
     }).on('update:after', function (obj, next) {
-        t.ok(obj, 'user object returned in update:after callback');
+        t.equal(obj.data.name, 'Dan', 'user object returned in update:after callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in update:after callback');
 
         return next();
     });
@@ -315,10 +338,14 @@ test('test update:before and update:after', function (t) {
         , description : 'quartz'
     };
 
+    var context = {
+        session : { test : 12345 }
+    };
+
     User.add(add).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
 
-        User.update(obj).then(function(obj) {
+        User.update(obj, context).then(function(obj) {
             User.del(obj).then(function () {
                 t.end();
             });
@@ -329,7 +356,7 @@ test('test update:before and update:after', function (t) {
 });
 
 test('test get:before and get:after', function (t) {
-    t.plan(4);
+    t.plan(5);
 
     var db = new SymDb({
         root : "/tmp/db"
@@ -340,12 +367,13 @@ test('test get:before and get:after', function (t) {
         , age : Number
         , user_id : Number
     }).on('get:before', function (obj, next) {
-        t.ok(obj, 'user object returned in get:before callback');
+        t.equal(obj.lookup.name, 'Dan', 'user object returned in get:before callback');
+        t.equal(obj.session.test, 12345, 'session exists on context in get:before callback');
 
         return next();
-    }).on('get:after', function (results, next) {
-        t.ok(results, 'user object returned in get:after callback');
-        t.equal(results.length, 1, 'results has one record');
+    }).on('get:after', function (result, next) {
+        t.ok(result, 'user object returned in get:after callback');
+        t.equal(result.results.length, 1, 'results has one record');
 
         return next();
     });
@@ -357,10 +385,14 @@ test('test get:before and get:after', function (t) {
         , description : 'quartz'
     };
 
+    var context = {
+        session : { test : 12345 }
+    };
+
     User.add(add).then(function (obj) {
         t.ok(obj, 'user object returned in add() callback');
 
-        User.get(obj).then(function(results) {
+        User.get(obj, context).then(function(results) {
             User.del(results[0]).then(function () {
                 t.end();
             });
