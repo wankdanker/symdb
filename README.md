@@ -58,7 +58,7 @@ todo
 - [x] deep attribute indexing
 - [ ] fulltext search
 - [ ] fix cleanup of empty index directories
-- [ ] rewrite .update() handling to not call delete() then save()
+- [x] rewrite .update() handling to not call delete() then save()
 - [x] paging
 - [x] sorting
 - [ ] https://github.com/davedoesdev/getdents
