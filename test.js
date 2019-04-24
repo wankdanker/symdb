@@ -838,3 +838,62 @@ test('test writing a blob', async function (t) {
     
     t.end();
 });
+
+test('test issue with incorrect result set', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var Webhooks = db.Model('webhooks', {
+        webhook_id : String
+        , name : String
+        , type : String
+        , event : String
+        , created_on : Number
+        , modified_on : Number
+    });
+
+    var hooks = await Webhooks.get();
+
+    for (let hook of hooks) {
+        await Webhooks.del(hook);
+    }
+
+    await Webhooks.add({
+        url: 'http://localhost:8089/shipment/{lookup}',
+        modified_on: '20190419',
+        modified_at: '095233717',
+        headers: {
+            'x-session': 'asdflkjasldkfjsaldkfj'
+        },
+        type: 'lookup',
+        name: 'local-rest-lookup',
+        title: 'Shipments lookup webhook',
+        created_on: '20190419',
+        created_at: '094809316'
+    });
+
+    await Webhooks.add({
+        headers: {
+            'x-session': 'asdflkjasldkfjsaldkfj'
+        },
+        url: 'http://localhost:8089/shipments',
+        type: 'event',
+        event: 'shipment:label',
+        method: 'post',
+        title: 'Post Shipment',
+        created_on: '20190423',
+        created_at: '123336770',
+    });
+
+    const lookup = {
+        type : 'event'
+        , event : 'shipment:create'
+    };
+
+    const results = await Webhooks.get(lookup);
+
+    t.equal(results.length, 0, 'no results should be returned.');
+
+    t.end();
+})
