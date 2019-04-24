@@ -152,6 +152,44 @@ SymDb.prototype.readdir = function (dir, filter, cb) {
     });
 };
 
+SymDb.prototype.readdirs = function (dirs, filter, cb) {
+    var self = this;
+
+    if (!cb) {
+        cb = filter;
+        filter = null;
+    }
+
+    //If no callback function provided, then return a Promise
+    if (cb === undefined) {
+        return Promised(self, self.readdirs, dirs, filter);
+    }
+
+    var results = [];
+
+    dirs.forEach(function (dir) {
+        fs.readdir(dir, function (err, files) {
+            if (err) {
+                return cb(err);
+            }
+
+            if (filter) {
+                files = files.filter(filter);
+            }
+
+            results.push(files);
+
+            check();
+        });
+    });
+
+    function check() {
+        if (results.length === dirs.length) {
+            cb(null, results);
+        }
+    }
+};
+
 SymDb.prototype.delFile = function (p, cb) {
     var self = this;
 
