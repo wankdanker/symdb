@@ -1,14 +1,14 @@
 var SymDb = require('./');
 var doWhile = require('dank-do-while');
 
-var db = new SymDb({ root : '/tmp/db'});
+var db = new SymDb({ root : '/tmp/db', linkType : SymDb.SOFT_LINK, blobs : false });
 
 var Test = db.Model('test', {
     id : Number
     , type : String
 });
 
-addItems(1000);
+addItems(10000);
 
 function addItems(count) {
     var x = count;
@@ -18,7 +18,7 @@ function addItems(count) {
         var start = +new Date();
 
         Test.add({
-            id : count
+            id : x
             , type : 'test'
         }, function () {
             var stop = +new Date();

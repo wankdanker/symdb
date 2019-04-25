@@ -801,6 +801,7 @@ test('test reindex', function (t) {
 test('test writing a blob', async function (t) {
     var db = new SymDb({
         root : "/tmp/db"
+        , blobs : true
     });
 
     var User = db.Model('user', {

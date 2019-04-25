@@ -28,7 +28,9 @@ function SymDb (opts) {
 
     SymDbComparison.mixin(self);
 
-    blobize(self);
+    if (opts.blobs) {
+        blobize(self);
+    }
 }
 
 inherits(SymDb, EventPipeline);
