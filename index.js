@@ -169,6 +169,10 @@ SymDb.prototype.readdirs = function (dirs, filter, cb) {
 
     var results = [];
 
+    if (!dirs.length) {
+        return cb(null, results);
+    }
+
     dirs.forEach(function (dir) {
         fs.readdir(dir, function (err, files) {
             if (err) {

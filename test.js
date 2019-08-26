@@ -898,3 +898,17 @@ test('test issue with incorrect result set', async function (t) {
 
     t.end();
 })
+
+test('test on empty directory', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var Model = db.Model('model', {
+        model_id : Number
+    });
+
+    var result = await Model.get({ model_id : SymDb.gte(1) });
+
+    t.end();
+});
