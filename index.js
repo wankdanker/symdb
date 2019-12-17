@@ -8,10 +8,12 @@ var inherits = require('util').inherits;
 var SymDbModel = require('./lib/symdb-model');
 var Promised = require('./lib/promise');
 var blobize = require('./lib/blobize');
+var patcher = require('./lib/patcher');
 
 module.exports = SymDb;
 
 SymDbComparison.mixin(module.exports);
+SymDb.patcher = patcher;
 
 SymDb.HARD_LINK = 1;
 SymDb.SOFT_LINK = 2;
