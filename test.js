@@ -912,3 +912,40 @@ test('test on empty directory', async function (t) {
 
     t.end();
 });
+
+test('test update and delete with SymDb.patcher', async function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var Model = db.Model('model', {
+        model_id : Number
+    });
+
+    Model.on('update:before', SymDb.patcher({ model_id : 'model_id' }));
+    Model.on('delete:before', SymDb.patcher({ model_id : 'model_id' }));
+
+    var result = await Model.add({ model_id : 'testing', type : 'human' });
+    t.ok(result, 'add result is truthy')
+    t.ok(result._id, 'result._id is truthy');
+    t.equal(result.model_id, 'testing', 'result.model_id is testing');
+    t.equal(result.type, 'human', 'result.type is human');
+
+    result = await Model.update({ model_id : 'testing', name : 'steve' });
+
+    t.ok(result, 'update result is truthy')
+    t.ok(result._id, 'result._id is truthy');
+    t.equal(result.model_id, 'testing', 'result.model_id is testing');
+    t.equal(result.type, 'human', 'result.type is human');
+    t.equal(result.name, 'steve', 'result.name is steve');
+
+    result = await Model.del({ model_id : 'testing' });
+
+    t.ok(result, 'delete result is truthy')
+    t.ok(result._id, 'result._id is truthy');
+    t.equal(result.model_id, 'testing', 'result.model_id is testing');
+    t.equal(result.type, 'human', 'result.type is human');
+    t.equal(result.name, 'steve', 'result.name is steve');
+
+    t.end();
+});
