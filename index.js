@@ -1,14 +1,14 @@
-var path = require('path');
-var fs = require('fs');
-var mkdirp = require('mkdirp');
-var EventPipeline = require('event-pipeline');
-var uuid = require('uuid/v4');
-var SymDbComparison = require('./lib/compare');
-var inherits = require('util').inherits;
-var SymDbModel = require('./lib/symdb-model');
-var Promised = require('./lib/promise');
-var blobize = require('./lib/blobize');
-var patcher = require('./lib/patcher');
+const path = require('path');
+const fs = require('fs');
+const mkdirp = require('mkdirp');
+const EventPipeline = require('event-pipeline');
+const uuid = require('uuid/v4');
+const SymDbComparison = require('./lib/compare');
+const inherits = require('util').inherits;
+const SymDbModel = require('./lib/symdb-model');
+const Promised = require('./lib/promise');
+const blobize = require('./lib/blobize');
+const patcher = require('./lib/patcher');
 
 module.exports = SymDb;
 
@@ -20,7 +20,7 @@ SymDb.SOFT_LINK = 2;
 SymDb.SYM_LINK = 2;
 
 function SymDb (opts) {
-    var self = this;
+    const self = this;
 
     EventPipeline.call(self);
 
@@ -38,9 +38,9 @@ function SymDb (opts) {
 inherits(SymDb, EventPipeline);
 
 SymDb.prototype.Model = function (name, schema) {
-    var self = this;
+    const self = this;
 
-    var model = new SymDbModel(self, name, schema);
+    const model = new SymDbModel(self, name, schema);
 
     self.models[name] = model;
 
@@ -50,17 +50,17 @@ SymDb.prototype.Model = function (name, schema) {
 };
 
 SymDb.prototype.id = function () { 
-    var self = this;
+    const self = this;
 
     return uuid();
 }
 
-SymDb.prototype.writeJSON = function (file, data, cb) {
-    var self = this;
+SymDb.prototype.writeJson = function (file, data, cb) {
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
-        return Promised(self, self.writeJSON, file, data);
+        return Promised(self, self.writeJson, file, data);
     }
 
     mkdirp(path.dirname(file), function (err) {
@@ -72,12 +72,21 @@ SymDb.prototype.writeJSON = function (file, data, cb) {
     });
 };
 
-SymDb.prototype.readJSON = function (file, cb) {
-    var self = this;
+SymDb.prototype.writeJsonSync = function (file, data) {
+    
+
+    mkdirp.sync(path.dirname(file))
+    
+
+    fs.writeFileSync(file, JSON.stringify(data));
+};
+
+SymDb.prototype.readJson = function (file, cb) {
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
-        return Promised(self, self.readJSON, file);
+        return Promised(self, self.readJson, file);
     }
 
     fs.readFile(file, function (err, data) {
@@ -96,8 +105,14 @@ SymDb.prototype.readJSON = function (file, cb) {
     });
 };
 
+SymDb.prototype.readJsonSync = function (file) {
+    let data = fs.readFileSync(file);
+    
+    return JSON.parse(data);
+};
+
 SymDb.prototype.writeBlob = function (file, data, cb) {
-    var self = this;
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
@@ -113,8 +128,21 @@ SymDb.prototype.writeBlob = function (file, data, cb) {
     });
 };
 
+SymDb.prototype.writeBlobSync = function (file, data) {
+    try {
+        mkdirp.sync(path.dirname(file));
+    }
+    catch (err) {
+        if (err && err.code !== 'EEXIST') {
+            throw err;
+        }
+    }
+
+    fs.writeFileSync(file, data);
+};
+
 SymDb.prototype.readBlob = function (file, cb) {
-    var self = this;
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
@@ -124,14 +152,18 @@ SymDb.prototype.readBlob = function (file, cb) {
     fs.readFile(file, cb);
 };
 
+SymDb.prototype.readBlobSync = function (file) {
+    return fs.readFileSync(file);
+};
+
 SymDb.prototype.readBlobStream = function (file) {
-    var self = this;
+    const self = this;
 
     return fs.createReadStream(file);
 };
 
 SymDb.prototype.readdir = function (dir, filter, cb) {
-    var self = this;
+    const self = this;
 
     if (!cb) {
         cb = filter;
@@ -156,8 +188,18 @@ SymDb.prototype.readdir = function (dir, filter, cb) {
     });
 };
 
+SymDb.prototype.readdirSync = function (dir, filter) {
+    let files = fs.readdirSync(dir);
+
+    if (filter) {
+        files = files.filter(filter);
+    }
+
+    return files;
+};
+
 SymDb.prototype.readdirs = function (dirs, filter, cb) {
-    var self = this;
+    const self = this;
 
     if (!cb) {
         cb = filter;
@@ -169,7 +211,7 @@ SymDb.prototype.readdirs = function (dirs, filter, cb) {
         return Promised(self, self.readdirs, dirs, filter);
     }
 
-    var results = [];
+    const results = [];
 
     if (!dirs.length) {
         return cb(null, results);
@@ -198,8 +240,28 @@ SymDb.prototype.readdirs = function (dirs, filter, cb) {
     }
 };
 
+SymDb.prototype.readdirsSync = function (dirs, filter) {
+    const results = [];
+
+    if (!dirs.length) {
+        return results;
+    }
+
+    for (const dir of dirs) {
+        let files = fs.readdirSync(dir) 
+
+        if (filter) {
+            files = files.filter(filter);
+        }
+
+        results.push(files);
+    }
+
+    return results;
+};
+
 SymDb.prototype.delFile = function (p, cb) {
-    var self = this;
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
@@ -211,20 +273,28 @@ SymDb.prototype.delFile = function (p, cb) {
             return cb(err);
         }
 
-        var dirname = path.dirname(p);
-
         return cb();
 
         // TODO: re-enable this when we have some sort of directory
         // locking mechanism to avoid race conditions with mkdirp and rmdir
+        // const dirname = path.dirname(p);
         // return rmdir(dirname, function (err) {
         //     return cb();
         // });
     });
 };
 
+SymDb.prototype.delFileSync = function (p) {
+    return fs.unlinkSync(p);
+    
+    // TODO: re-enable this when we have some sort of directory
+    // locking mechanism to avoid race conditions with mkdirp and rmdir
+    // const  dirname = path.dirname(p);
+    // return fs.rmdirSync(dirname);
+};
+
 SymDb.prototype.linkFile = function (target, p, cb) {
-    var self = this;
+    const self = this;
 
     //If no callback function provided, then return a Promise
     if (cb === undefined) {
@@ -245,3 +315,15 @@ SymDb.prototype.linkFile = function (target, p, cb) {
     });
 }
 
+SymDb.prototype.linkFileSync = function (target, p) {
+    const self = this;
+
+    mkdirp.sync(path.dirname(p));
+
+    if (self.linkType === SymDb.HARD_LINK) {
+        return fs.linkSync(path.resolve(p, '../' + target), p);
+    }
+    else{
+        return fs.symlinkSync(target, p);
+    }
+}
