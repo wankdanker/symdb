@@ -268,7 +268,7 @@ SymDb.prototype.delFile = function (p, cb) {
         return Promised(self, self.delFile, p);
     }
 
-    return fs.unlink(p, function (err) {
+    return fs.unlink(path.resolve(self.root, p), function (err) {
         if (err) {
             return cb(err);
         }
@@ -285,7 +285,9 @@ SymDb.prototype.delFile = function (p, cb) {
 };
 
 SymDb.prototype.delFileSync = function (p) {
-    return fs.unlinkSync(p);
+    const self = this;
+
+    return fs.unlinkSync(path.resolve(self.root, p));
     
     // TODO: re-enable this when we have some sort of directory
     // locking mechanism to avoid race conditions with mkdirp and rmdir

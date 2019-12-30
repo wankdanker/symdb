@@ -841,11 +841,11 @@ test('test writing a blob', async function (t) {
 });
 
 test('test issue with incorrect result set', async function (t) {
-    var db = new SymDb({
+    const db = new SymDb({
         root : "/tmp/db"
     });
 
-    var Webhooks = db.Model('webhooks', {
+    const Webhooks = db.Model('webhooks', {
         webhook_id : String
         , name : String
         , type : String
@@ -854,7 +854,7 @@ test('test issue with incorrect result set', async function (t) {
         , modified_on : Number
     });
 
-    var hooks = await Webhooks.get();
+    let hooks = await Webhooks.get();
 
     for (let hook of hooks) {
         await Webhooks.del(hook);
@@ -895,6 +895,12 @@ test('test issue with incorrect result set', async function (t) {
     const results = await Webhooks.get(lookup);
 
     t.equal(results.length, 0, 'no results should be returned.');
+
+    hooks = await Webhooks.get();
+
+    for (const hook of hooks) {
+        await Webhooks.del(hook);
+    }
 
     t.end();
 })
