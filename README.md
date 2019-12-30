@@ -75,7 +75,7 @@ let results = Model.get({
     weight : SymDb.gt(42)
 });
 
-// alse these
+// also these
 SymDb.gt(10)
 SymDb.gte(10)
 SymDb.lt(9)
@@ -86,12 +86,19 @@ SymDb.between(1, 10)
 SymDb.contains(['a','b', 'c'])
 SymDb.compare(function (z) { return z === 1234 })
 ```
+### Model.getSync(lookup[, context]) => Array
 
 ### Model.add(obj[, context][, callback]) => Promise
 
+### Model.addSync(obj[, context][, callback]) => Object
+
 ### Model.update(obj[, context][, callback]) => Promise
 
+### Model.updateSync(obj[, context][, callback]) => Object
+
 ### Model.del(obj[, context][, callback]) => Promise
+
+### Model.delSync(obj[, context][, callback]) => Object
 
 ## Model Events
 
@@ -129,22 +136,41 @@ catch (e) {
 
 ### Model.on('get:after', (event, cb) => {})
 
+### Model.on('get-sync:before', (event, cb) => {})
+
+### Model.on('get-sync:after', (event, cb) => {})
+
 ### Model.on('add:before', (event, cb) => {})
 
 ### Model.on('add:after', (event, cb) => {})
+
+### Model.on('add-sync:before', (event, cb) => {})
+
+### Model.on('add-sync:after', (event, cb) => {})
 
 ### Model.on('update:before', (event, cb) => {})
 
 ### Model.on('update:after', (event, cb) => {})
 
+### Model.on('update-sync:before', (event, cb) => {})
+
+### Model.on('update-sync:after', (event, cb) => {})
+
 ### Model.on('delete:before', (event, cb) => {})
 
 ### Model.on('delete:after', (event, cb) => {})
+
+### Model.on('delete-sync:before', (event, cb) => {})
+
+### Model.on('delete-sync:after', (event, cb) => {})
 
 ### Model.on('save:before', (event, cb) => {})
 
 ### Model.on('save:after', (event, cb) => {})
 
+### Model.on('save-sync:before', (event, cb) => {})
+
+### Model.on('save-sync:after', (event, cb) => {})
 
 todo
 ----
@@ -171,6 +197,7 @@ todo
   - [ ] does the object have blobs? 
   - [ ] if so, which keys?
   - [ ] keep symbolic links references in the metadata?
+- [x] synchronous versions of all model operations
 
 license
 -------
