@@ -22,7 +22,7 @@
     "tape": "^4.9.1"
   },
   "scripts": {
-    "test": "node test.js"
+    "test": "tape test/*.js"
   },
   "repository": {
     "type": "git",
