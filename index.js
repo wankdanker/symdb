@@ -18,6 +18,7 @@ SymDb.patcher = patcher;
 SymDb.HARD_LINK = 1;
 SymDb.SOFT_LINK = 2;
 SymDb.SYM_LINK = 2;
+SymDb.EMPTY_FILE = 3;
 
 function SymDb (opts) {
     const self = this;
@@ -311,7 +312,16 @@ SymDb.prototype.linkFile = function (target, p, cb) {
         if (self.linkType === SymDb.HARD_LINK) {
             fs.link(path.resolve(p, '../' + target), p, cb)
         }
-        else{
+        else if (self.linkType === SymDb.EMPTY_FILE) {
+            fs.open(p, 'a', function (err, fd) {
+                if (err) {
+                    return cb(err);
+                }
+
+                fs.close(fd, cb);
+            });
+        }
+        else {
             fs.symlink(target, p, cb);
         }
     });
@@ -325,7 +335,10 @@ SymDb.prototype.linkFileSync = function (target, p) {
     if (self.linkType === SymDb.HARD_LINK) {
         return fs.linkSync(path.resolve(p, '../' + target), p);
     }
-    else{
+    else if (self.linkType === SymDb.EMPTY_FILE) {
+        fs.closeSync(fs.openSync(p, 'a'));
+    }
+    else {
         return fs.symlinkSync(target, p);
     }
 }
