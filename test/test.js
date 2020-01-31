@@ -3,6 +3,23 @@ var SymDb = require('..');
 var blobize = require('../lib/blobize');
 
 test('comparison functions', function (t) {
+    t.equal(SymDb.isNull().compare(null), true, 'null is null');
+    t.equal(SymDb.isNull().compare(undefined), false, 'undefined is not null');
+    t.equal(SymDb.isNull().compare(true), false, 'true is not null');
+    t.equal(SymDb.isNull().compare(false), false, 'false is not null');
+    t.equal(SymDb.isNull().compare(1), false, '1 is not null');
+    t.equal(SymDb.isNull().compare('null'), false, '"null" is not null');
+    t.equal(SymDb.isNull().compare('asdf'), false, '"asdf" is not null');
+    
+    t.equal(SymDb.isUndefined().compare(null), false, 'null is not undefined');
+    t.equal(SymDb.isUndefined().compare(undefined), true, 'undefined is undefined');
+    t.equal(SymDb.isUndefined().compare(true), false, 'true is not undefined');
+    t.equal(SymDb.isUndefined().compare(false), false, 'false is not undefined');
+    t.equal(SymDb.isUndefined().compare(1), false, '1 is not undefined');
+    t.equal(SymDb.isUndefined().compare('null'), false, '"null" is not undefined');
+    t.equal(SymDb.isUndefined().compare('asdf'), false, '"asdf" is not undefined');
+    t.equal(SymDb.isUndefined().compare('undefined'), false, '"undefined" is not undefined');
+
     t.equal(SymDb.gt(10).compare(11), true, '11 is greater than 10');
     t.equal(SymDb.gt(10).compare(9), false, '9 is not greater than 10');
 

@@ -178,3 +178,35 @@ test('sync: test on empty directory', function (t) {
     t.equal(result.length, 0, 'should have no results');
     t.end();
 });
+
+
+test('sync: get indexed null values', function (t) {
+    var db = new SymDb({
+        root : "/tmp/db"
+    });
+
+    var Model = db.Model('asdf2', {
+        model_id : String
+    });
+
+    Model.addSync({ model_id : null, test : 2345 });
+    Model.addSync({ test : 1234 });
+
+    var result = Model.getSync({ model_id : 'null' });
+
+    t.equal(result.length, 1, 'should have 1 results');
+
+    var result = Model.getSync({ model_id : 'undefined' });
+
+    t.equal(result.length, 1, 'should have 1 results');
+
+    var result = Model.getSync({ model_id : SymDb.contains(['undefined', 'null']) });
+
+    t.equal(result.length, 2, 'should have 2 results');
+
+    for (const record of result) {
+        Model.delSync(record);
+    }
+
+    t.end();
+});
