@@ -15,7 +15,7 @@
     "fast_array_intersect": "1.1.0",
     "get-value": "^3.0.1",
     "mkdirp": "^0.5.1",
-    "set-value": "^3.0.1",
+    "set-value": "^4.1.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
