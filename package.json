@@ -16,7 +16,7 @@
     "get-value": "^3.0.1",
     "mkdirp": "^0.5.1",
     "set-value": "^3.0.1",
-    "uuid": "^3.3.2"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "tape": "^4.9.1"
